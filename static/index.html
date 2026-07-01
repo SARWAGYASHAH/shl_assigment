@@ -587,12 +587,43 @@
             contentDiv.className = 'message-content';
             contentDiv.innerHTML = formatMarkdown(content);
 
-            // Add recommendation cards
-            if (recommendations.length > 0) {
+            // Add recommendation cards (backend response or parsed from text)
+            let cards = [...recommendations];
+            
+            if (cards.length === 0 && role === 'bot') {
+                // Regex search for SHL catalog links in the reply text
+                const urlRegex = /https:\/\/www\.shl\.com\/solutions\/products\/product-catalog\/view\/([a-zA-Z0-9\-]+)\//g;
+                let match;
+                const seenUrls = new Set();
+                
+                while ((match = urlRegex.exec(content)) !== null) {
+                    const url = match[0];
+                    if (!seenUrls.has(url)) {
+                        seenUrls.add(url);
+                        
+                        // Infer test name from URL slug (e.g., coding-simulation-python -> Coding Simulation - Python)
+                        const slug = match[1];
+                        let name = slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                        if (name.includes('Csharp')) name = name.replace('Csharp', 'C#');
+                        if (name.includes('New')) name = name.replace('New', '(New)');
+                        
+                        // Heuristically guess type from URL slug
+                        let test_type = 'K'; // Default
+                        if (slug.includes('coding') || slug.includes('simulation') || slug.includes('automata')) test_type = 'S';
+                        else if (slug.includes('verify') || slug.includes('reasoning') || slug.includes('ability')) test_type = 'A';
+                        else if (slug.includes('opq') || slug.includes('personality')) test_type = 'P';
+                        else if (slug.includes('scenarios') || slug.includes('sjt') || slug.includes('judgment')) test_type = 'B';
+                        
+                        cards.push({ name, url, test_type });
+                    }
+                }
+            }
+
+            if (cards.length > 0) {
                 const cardsDiv = document.createElement('div');
                 cardsDiv.className = 'rec-cards';
 
-                recommendations.forEach(rec => {
+                cards.forEach(rec => {
                     const card = document.createElement('a');
                     card.className = 'rec-card';
                     card.href = rec.url;
@@ -614,7 +645,7 @@
                 // Add type legend
                 const legend = document.createElement('div');
                 legend.className = 'type-legend';
-                const usedTypes = [...new Set(recommendations.map(r => r.test_type))];
+                const usedTypes = [...new Set(cards.map(r => r.test_type))];
                 usedTypes.forEach(t => {
                     const colors = { K: '#60a5fa', S: '#34d399', A: '#fbbf24', P: '#a78bfa', B: '#f472b6' };
                     legend.innerHTML += `<span class="type-label"><span style="background:${colors[t] || '#999'}"></span>${t} = ${TYPE_LABELS[t] || t}</span>`;
