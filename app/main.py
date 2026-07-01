@@ -19,6 +19,7 @@ from app.schemas import ChatRequest, ChatResponse, HealthResponse
 from app.catalog import catalog
 from app.embeddings import build_index
 from app.agent import process_chat
+from app.keep_alive import start_keep_alive
 
 # Resolve project root for static files
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -52,6 +53,12 @@ async def lifespan(app: FastAPI):
     elapsed = time.time() - start
     print(f"\n[OK] Startup complete in {elapsed:.1f}s")
     print("=" * 60)
+
+    # Start Render keep-alive if configured
+    try:
+        start_keep_alive()
+    except Exception as e:
+        print(f"[FAIL] Failed to start keep-alive background task: {e}", flush=True)
 
     yield  # App is running
 
