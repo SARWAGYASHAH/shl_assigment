@@ -562,6 +562,8 @@
         }
 
         function formatMarkdown(text) {
+            // Convert raw URLs into clickable anchor tags
+            text = text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color: #60a5fa; text-decoration: underline; word-break: break-all;">$1</a>');
             // Bold
             text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             // Italic
