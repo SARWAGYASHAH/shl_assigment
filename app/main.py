@@ -8,14 +8,20 @@ Exposes two endpoints:
 import os
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from app.schemas import ChatRequest, ChatResponse, HealthResponse
 from app.catalog import catalog
 from app.embeddings import build_index
 from app.agent import process_chat
+
+# Resolve project root for static files
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 @asynccontextmanager
@@ -72,6 +78,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files
+static_dir = PROJECT_ROOT / "static"
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+
+@app.get("/", include_in_schema=False)
+async def root():
+    """Serve the chat UI."""
+    index_path = static_dir / "index.html"
+    if index_path.exists():
+        return FileResponse(str(index_path))
+    return {"message": "SHL Assessment Recommender API. See /docs for API documentation."}
 
 
 @app.get("/health", response_model=HealthResponse)
